@@ -15,8 +15,13 @@
     "clean": "gatsby clean"
   },
   "dependencies": {
+    "@types/three": "^0.141.0",
     "gatsby": "^4.15.2",
     "react": "^18.1.0",
-    "react-dom": "^18.1.0"
+    "react-dom": "^18.1.0",
+    "three": "^0.141.0"
+  },
+  "devDependencies": {
+    "prettier": "^2.6.2"
   }
 }
