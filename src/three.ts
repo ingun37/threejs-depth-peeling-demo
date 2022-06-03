@@ -1,11 +1,13 @@
 import {
   AmbientLight,
+  DepthTexture,
   DirectionalLight,
   Mesh,
   MeshBasicMaterial,
   MeshPhongMaterial,
   PerspectiveCamera,
   Scene,
+  ShaderMaterial,
   TorusBufferGeometry,
   TorusKnotBufferGeometry,
   WebGLRenderer,
@@ -23,14 +25,26 @@ export function three(id: string, width: number, height: number) {
   scene.add(
     new Mesh(
       new TorusKnotBufferGeometry(),
-      new MeshPhongMaterial({
-        color: 0xfff000,
+      new ShaderMaterial({
+        vertexShader: `
+varying vec3 N;
+void main() {
+  N = normal; 
+  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
+}`,
+        fragmentShader: `
+varying vec3 N;
+void main() {
+  gl_FragColor = vec4(N, 0.5);
+}`,
         transparent: true,
-        opacity: 0.5,
       })
     )
   );
   camera.position.z = 5;
+  const depthA = new DepthTexture(width, height);
+  const depthB = new DepthTexture(width, height);
+
   requestAnimationFrame(() => {
     renderer.render(scene, camera);
   });
