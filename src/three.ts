@@ -55,7 +55,7 @@ void main() {
   });
   requestAnimationFrame(() => {
     DP.render(dp);
-    copy.uniforms.tDiffuse.value = dp.layer1.texture;
+    copy.uniforms.tDiffuse.value = dp.layer4.texture;
     quad.render(renderer);
   });
 }

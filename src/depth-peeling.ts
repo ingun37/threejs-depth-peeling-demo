@@ -29,6 +29,9 @@ export type DepthPeelingContext = {
   scene: Scene;
   layer0: WebGLRenderTarget;
   layer1: WebGLRenderTarget;
+  layer2: WebGLRenderTarget;
+  layer3: WebGLRenderTarget;
+  layer4: WebGLRenderTarget;
   renderer: WebGLRenderer;
   camera: Camera;
   globalUniforms: GlobalUniform;
@@ -84,11 +87,29 @@ export function createDepthPeelingContext(p: Parameters): DepthPeelingContext {
   const layer1 = new WebGLRenderTarget(p.width, p.height, {
     depthTexture: depth1,
   });
+  const depth2 = new DepthTexture(p.width, p.height);
+  const layer2 = new WebGLRenderTarget(p.width, p.height, {
+    depthTexture: depth2,
+  });
+
+  const depth3 = new DepthTexture(p.width, p.height);
+  const layer3 = new WebGLRenderTarget(p.width, p.height, {
+    depthTexture: depth3,
+  });
+
+  const depth4 = new DepthTexture(p.width, p.height);
+  const layer4 = new WebGLRenderTarget(p.width, p.height, {
+    depthTexture: depth4,
+  });
+
   return {
     camera: p.camera,
     globalUniforms,
     layer0,
     layer1,
+    layer2,
+    layer3,
+    layer4,
     renderer: p.renderer,
     scene: p.scene,
     width: p.width,
@@ -116,6 +137,24 @@ export function render(dp: DepthPeelingContext) {
   );
 
   dp.renderer.setRenderTarget(dp.layer1);
+  dp.renderer.render(dp.scene, dp.camera);
+
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer1.depthTexture;
+  dp.globalUniforms.uLayer.value = 2;
+
+  dp.renderer.setRenderTarget(dp.layer2);
+  dp.renderer.render(dp.scene, dp.camera);
+
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer2.depthTexture;
+  dp.globalUniforms.uLayer.value = 3;
+
+  dp.renderer.setRenderTarget(dp.layer3);
+  dp.renderer.render(dp.scene, dp.camera);
+
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer3.depthTexture;
+  dp.globalUniforms.uLayer.value = 4;
+
+  dp.renderer.setRenderTarget(dp.layer4);
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.renderer.setRenderTarget(null);
