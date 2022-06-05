@@ -56,14 +56,14 @@ void main() {
     depth: 3,
   });
   requestAnimationFrame(() => {
-    DP.render(dp);
-    copy.uniforms.tDiffuse.value = dp.finals[dp.finals.length - 1].texture;
+    const final = DP.render(dp);
+    copy.uniforms.tDiffuse.value = final.texture;
     renderer.clear();
     quad.render(renderer);
     setTimeout(() => {
-      debugRenderTarget(renderer, dp.finals[0], width, height, "final0.png");
-      debugRenderTarget(renderer, dp.finals[1], width, height, "final1.png");
-      debugRenderTarget(renderer, dp.finals[2], width, height, "final2.png");
+      // debugRenderTarget(renderer, dp.finals[0], width, height, "final0.png");
+      // debugRenderTarget(renderer, dp.finals[1], width, height, "final1.png");
+      // debugRenderTarget(renderer, dp.finals[2], width, height, "final2.png");
       // debugRenderTarget(renderer, dp.final3, width, height, "final3.png");
       // debugRenderTarget(renderer, dp.final, width, height, "final.png");
     });

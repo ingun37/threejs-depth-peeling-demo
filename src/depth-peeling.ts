@@ -1,5 +1,6 @@
 import {
   Camera,
+  Color,
   DataTexture,
   DepthTexture,
   IUniform,
@@ -8,7 +9,6 @@ import {
   NoBlending,
   Scene,
   ShaderMaterial,
-  Texture,
   Vector2,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -66,13 +66,14 @@ uniform int uLayer;
       obj.material.needsUpdate = true;
     }
   });
-  const layers = new Array(p.depth).fill(0).map(
-    () =>
+  const [A, B] = new Array(2)
+    .fill(0)
+    .map((): [WebGLRenderTarget, WebGLRenderTarget] => [
       new WebGLRenderTarget(p.width, p.height, {
         depthTexture: new DepthTexture(p.width, p.height),
-      })
-  );
-  const finals = layers.map(() => new WebGLRenderTarget(p.width, p.height));
+      }),
+      new WebGLRenderTarget(p.width, p.height),
+    ]);
 
   const underCompositeMaterial = new ShaderMaterial({
     vertexShader: `
@@ -101,15 +102,15 @@ uniform int uLayer;
   return {
     camera: p.camera,
     globalUniforms,
-    layers,
     renderer: p.renderer,
     scene: p.scene,
     width: p.width,
     height: p.height,
-    finals,
     underCompositeMaterial,
     quad: new FullScreenQuad(underCompositeMaterial),
-    zero: new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1),
+    A,
+    B,
+    depth: p.depth,
     one: new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1),
   };
 }
@@ -131,31 +132,45 @@ export function render(dp: DepthPeelingContext) {
     1 / dp.height
   );
 
-  new Array(dp.layers.length).fill(0).reduce(
+  const [layerA, compositeA] = dp.A;
+  const [layerB, compositeB] = dp.B;
+  const previousClearColor = new Color();
+  dp.renderer.getClearColor(previousClearColor);
+  dp.renderer.setClearColor(0x000000, 0);
+
+  dp.renderer.setRenderTarget(layerA);
+  dp.renderer.clear();
+  dp.renderer.setRenderTarget(compositeA);
+  dp.renderer.clear();
+
+  const [, finalComposite] = new Array(dp.depth).fill(0).reduce(
     (
-      [prevDepth, prevLayer]: [Texture, Texture],
+      [prevDepth, prevComposite]: [WebGLRenderTarget, WebGLRenderTarget],
       _,
       idx
-    ): [Texture, Texture] => {
-      const layer = dp.layers[idx];
-      const final = dp.finals[idx];
-      dp.globalUniforms.uPrevDepthTexture.value = prevDepth;
+    ): [WebGLRenderTarget, WebGLRenderTarget] => {
+      const layer = prevDepth === layerA ? layerB : layerA;
+      const composite = prevComposite === compositeA ? compositeB : compositeA;
+      dp.globalUniforms.uPrevDepthTexture.value =
+        idx === 0 ? dp.one : prevDepth.depthTexture;
       dp.renderer.setRenderTarget(layer);
       dp.renderer.clear();
       dp.renderer.render(dp.scene, dp.camera);
-      dp.renderer.setRenderTarget(final);
+      dp.renderer.setRenderTarget(composite);
       dp.renderer.clear();
-      dp.underCompositeMaterial.uniforms.tDst.value = prevLayer;
+      dp.underCompositeMaterial.uniforms.tDst.value = prevComposite.texture;
       dp.underCompositeMaterial.uniforms.tSrc.value = layer.texture;
       dp.underCompositeMaterial.uniformsNeedUpdate = true;
       dp.quad.render(dp.renderer);
-      return [layer.depthTexture, final.texture];
+      return [layer, composite];
     },
-    [dp.one, dp.zero]
+    [layerA, compositeA]
   );
 
   dp.renderer.setRenderTarget(null);
   // TODO restore blending
+  // TODO restore clear color
+  return finalComposite;
 }
 
 export function destroy(context: DepthPeelingContext) {
