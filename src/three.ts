@@ -36,7 +36,7 @@ void main() {
         fragmentShader: `
 varying vec3 N;
 void main() {
-  gl_FragColor = vec4(N, 0.5);
+  gl_FragColor = vec4(N, 0.7);
 }`,
         transparent: true,
         side: DoubleSide,
@@ -56,11 +56,15 @@ void main() {
   });
   requestAnimationFrame(() => {
     DP.render(dp);
-    copy.uniforms.tDiffuse.value = dp.final.texture;
+    copy.uniforms.tDiffuse.value = dp.final3.texture;
     renderer.clear();
     quad.render(renderer);
     setTimeout(() => {
-      debugRenderTarget(renderer, dp.final, width, height, "final.png");
+      debugRenderTarget(renderer, dp.final0, width, height, "final0.png");
+      debugRenderTarget(renderer, dp.final1, width, height, "final1.png");
+      debugRenderTarget(renderer, dp.final2, width, height, "final2.png");
+      debugRenderTarget(renderer, dp.final3, width, height, "final3.png");
+      // debugRenderTarget(renderer, dp.final, width, height, "final.png");
     });
   });
 }

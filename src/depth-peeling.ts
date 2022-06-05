@@ -127,7 +127,10 @@ export function createDepthPeelingContext(p: Parameters) {
     scene: p.scene,
     width: p.width,
     height: p.height,
-    final: new WebGLRenderTarget(p.width, p.height),
+    final0: new WebGLRenderTarget(p.width, p.height),
+    final1: new WebGLRenderTarget(p.width, p.height),
+    final2: new WebGLRenderTarget(p.width, p.height),
+    final3: new WebGLRenderTarget(p.width, p.height),
     underCompositeMaterial,
     quad: new FullScreenQuad(underCompositeMaterial),
     zero: new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1),
@@ -180,10 +183,31 @@ export function render(dp: DepthPeelingContext) {
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
-  dp.renderer.setRenderTarget(dp.final);
+  dp.renderer.setRenderTarget(dp.final0);
   dp.renderer.clear();
   dp.underCompositeMaterial.uniforms.tDst.value = dp.zero;
   dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer0.texture;
+  dp.underCompositeMaterial.uniformsNeedUpdate = true;
+  dp.quad.render(dp.renderer);
+
+  dp.renderer.setRenderTarget(dp.final1);
+  dp.renderer.clear();
+  dp.underCompositeMaterial.uniforms.tDst.value = dp.final0.texture;
+  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer1.texture;
+  dp.underCompositeMaterial.uniformsNeedUpdate = true;
+  dp.quad.render(dp.renderer);
+
+  dp.renderer.setRenderTarget(dp.final2);
+  dp.renderer.clear();
+  dp.underCompositeMaterial.uniforms.tDst.value = dp.final1.texture;
+  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer2.texture;
+  dp.underCompositeMaterial.uniformsNeedUpdate = true;
+  dp.quad.render(dp.renderer);
+
+  dp.renderer.setRenderTarget(dp.final3);
+  dp.renderer.clear();
+  dp.underCompositeMaterial.uniforms.tDst.value = dp.final2.texture;
+  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer3.texture;
   dp.underCompositeMaterial.uniformsNeedUpdate = true;
   dp.quad.render(dp.renderer);
 
