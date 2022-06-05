@@ -117,7 +117,10 @@ uniform int uLayer;
 export type DepthPeelingContext = ReturnType<typeof createDepthPeelingContext>;
 
 const blendingCache = new Map<Mesh, number>();
-export function render(dp: DepthPeelingContext) {
+export function render(
+  dp: DepthPeelingContext,
+  renderTarget: WebGLRenderTarget | null | undefined
+) {
   blendingCache.clear();
 
   dp.scene.traverse((obj) => {
@@ -149,20 +152,30 @@ export function render(dp: DepthPeelingContext) {
       _,
       idx
     ): [WebGLRenderTarget, WebGLRenderTarget] => {
-      const layer = prevDepth === layerA ? layerB : layerA;
-      const composite = prevComposite === compositeA ? compositeB : compositeA;
+      const otherLayer = prevDepth === layerA ? layerB : layerA;
+      const otherComposite =
+        prevComposite === compositeA ? compositeB : compositeA;
       dp.globalUniforms.uPrevDepthTexture.value =
         idx === 0 ? dp.one : prevDepth.depthTexture;
-      dp.renderer.setRenderTarget(layer);
+      dp.renderer.setRenderTarget(otherLayer);
       dp.renderer.clear();
       dp.renderer.render(dp.scene, dp.camera);
-      dp.renderer.setRenderTarget(composite);
+
+      dp.renderer.setRenderTarget(
+        idx < dp.depth - 1
+          ? otherComposite // If it's not the final step then proceed ping-ponging
+          : renderTarget // If it's the final step, and if renderTarget is given,
+          ? renderTarget // ... then render to the given render Target
+          : renderTarget === undefined // if render targen is undefined,
+          ? otherComposite // ... then keep ping-ponging
+          : null // or render to the main frame buffer
+      );
       dp.renderer.clear();
       dp.underCompositeMaterial.uniforms.tDst.value = prevComposite.texture;
-      dp.underCompositeMaterial.uniforms.tSrc.value = layer.texture;
+      dp.underCompositeMaterial.uniforms.tSrc.value = otherLayer.texture;
       dp.underCompositeMaterial.uniformsNeedUpdate = true;
       dp.quad.render(dp.renderer);
-      return [layer, composite];
+      return [otherLayer, otherComposite];
     },
     [layerA, compositeA]
   );
