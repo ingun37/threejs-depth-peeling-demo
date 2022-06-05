@@ -114,11 +114,6 @@ export function render(dp: DepthPeelingContext) {
     1 / dp.width,
     1 / dp.height
   );
-  dp.scene.traverse((obj) => {
-    if (obj instanceof Mesh && obj.material instanceof Material) {
-      (obj.material as ShaderMaterial).uniformsNeedUpdate = true;
-    }
-  });
 
   dp.renderer.setRenderTarget(dp.layer1);
   dp.renderer.render(dp.scene, dp.camera);
