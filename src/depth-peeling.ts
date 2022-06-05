@@ -8,6 +8,7 @@ import {
   NoBlending,
   Scene,
   ShaderMaterial,
+  Texture,
   Vector2,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -20,6 +21,7 @@ export type Parameters = {
   scene: Scene;
   width: number;
   height: number;
+  depth: number;
 };
 export type GlobalUniform = {
   uPrevDepthTexture: IUniform;
@@ -64,28 +66,13 @@ uniform int uLayer;
       obj.material.needsUpdate = true;
     }
   });
-  const depth0 = new DepthTexture(p.width, p.height);
-  const layer0 = new WebGLRenderTarget(p.width, p.height, {
-    depthTexture: depth0,
-  });
-  const depth1 = new DepthTexture(p.width, p.height);
-  const layer1 = new WebGLRenderTarget(p.width, p.height, {
-    depthTexture: depth1,
-  });
-  const depth2 = new DepthTexture(p.width, p.height);
-  const layer2 = new WebGLRenderTarget(p.width, p.height, {
-    depthTexture: depth2,
-  });
-
-  const depth3 = new DepthTexture(p.width, p.height);
-  const layer3 = new WebGLRenderTarget(p.width, p.height, {
-    depthTexture: depth3,
-  });
-
-  const depth4 = new DepthTexture(p.width, p.height);
-  const layer4 = new WebGLRenderTarget(p.width, p.height, {
-    depthTexture: depth4,
-  });
+  const layers = new Array(p.depth).fill(0).map(
+    () =>
+      new WebGLRenderTarget(p.width, p.height, {
+        depthTexture: new DepthTexture(p.width, p.height),
+      })
+  );
+  const finals = layers.map(() => new WebGLRenderTarget(p.width, p.height));
 
   const underCompositeMaterial = new ShaderMaterial({
     vertexShader: `
@@ -114,19 +101,12 @@ uniform int uLayer;
   return {
     camera: p.camera,
     globalUniforms,
-    layer0,
-    layer1,
-    layer2,
-    layer3,
-    layer4,
+    layers,
     renderer: p.renderer,
     scene: p.scene,
     width: p.width,
     height: p.height,
-    final0: new WebGLRenderTarget(p.width, p.height),
-    final1: new WebGLRenderTarget(p.width, p.height),
-    final2: new WebGLRenderTarget(p.width, p.height),
-    final3: new WebGLRenderTarget(p.width, p.height),
+    finals,
     underCompositeMaterial,
     quad: new FullScreenQuad(underCompositeMaterial),
     zero: new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1),
@@ -151,49 +131,28 @@ export function render(dp: DepthPeelingContext) {
     1 / dp.height
   );
 
-  dp.globalUniforms.uPrevDepthTexture.value = dp.one;
-  dp.renderer.setRenderTarget(dp.layer0);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-  dp.renderer.setRenderTarget(dp.final0);
-  dp.renderer.clear();
-  dp.underCompositeMaterial.uniforms.tDst.value = dp.zero;
-  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer0.texture;
-  dp.underCompositeMaterial.uniformsNeedUpdate = true;
-  dp.quad.render(dp.renderer);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer0.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer1);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-  dp.renderer.setRenderTarget(dp.final1);
-  dp.renderer.clear();
-  dp.underCompositeMaterial.uniforms.tDst.value = dp.final0.texture;
-  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer1.texture;
-  dp.underCompositeMaterial.uniformsNeedUpdate = true;
-  dp.quad.render(dp.renderer);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer1.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer2);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-  dp.renderer.setRenderTarget(dp.final2);
-  dp.renderer.clear();
-  dp.underCompositeMaterial.uniforms.tDst.value = dp.final1.texture;
-  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer2.texture;
-  dp.underCompositeMaterial.uniformsNeedUpdate = true;
-  dp.quad.render(dp.renderer);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer2.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer3);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-  dp.renderer.setRenderTarget(dp.final3);
-  dp.renderer.clear();
-  dp.underCompositeMaterial.uniforms.tDst.value = dp.final2.texture;
-  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer3.texture;
-  dp.underCompositeMaterial.uniformsNeedUpdate = true;
-  dp.quad.render(dp.renderer);
+  new Array(dp.layers.length).fill(0).reduce(
+    (
+      [prevDepth, prevLayer]: [Texture, Texture],
+      _,
+      idx
+    ): [Texture, Texture] => {
+      const layer = dp.layers[idx];
+      const final = dp.finals[idx];
+      dp.globalUniforms.uPrevDepthTexture.value = prevDepth;
+      dp.renderer.setRenderTarget(layer);
+      dp.renderer.clear();
+      dp.renderer.render(dp.scene, dp.camera);
+      dp.renderer.setRenderTarget(final);
+      dp.renderer.clear();
+      dp.underCompositeMaterial.uniforms.tDst.value = prevLayer;
+      dp.underCompositeMaterial.uniforms.tSrc.value = layer.texture;
+      dp.underCompositeMaterial.uniformsNeedUpdate = true;
+      dp.quad.render(dp.renderer);
+      return [layer.depthTexture, final.texture];
+    },
+    [dp.one, dp.zero]
+  );
 
   dp.renderer.setRenderTarget(null);
   // TODO restore blending
