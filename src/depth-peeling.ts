@@ -1,15 +1,18 @@
 import {
   Camera,
+  DataTexture,
   DepthTexture,
   IUniform,
   Material,
   Mesh,
   NoBlending,
   Scene,
+  ShaderMaterial,
   Vector2,
   WebGLRenderer,
   WebGLRenderTarget,
 } from "three";
+import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
 export type Parameters = {
   renderer: WebGLRenderer;
@@ -24,21 +27,8 @@ export type GlobalUniform = {
   uPrevColorTexture: IUniform;
   uReciprocalScreenSize: IUniform;
 };
-export type DepthPeelingContext = {
-  scene: Scene;
-  layer0: WebGLRenderTarget;
-  layer1: WebGLRenderTarget;
-  layer2: WebGLRenderTarget;
-  layer3: WebGLRenderTarget;
-  layer4: WebGLRenderTarget;
-  renderer: WebGLRenderer;
-  camera: Camera;
-  globalUniforms: GlobalUniform;
-  width: number;
-  height: number;
-};
 
-export function createDepthPeelingContext(p: Parameters): DepthPeelingContext {
+export function createDepthPeelingContext(p: Parameters) {
   let globalUniforms: GlobalUniform = {
     uLayer: { value: 0 },
     uPrevDepthTexture: { value: null },
@@ -101,6 +91,30 @@ export function createDepthPeelingContext(p: Parameters): DepthPeelingContext {
     depthTexture: depth4,
   });
 
+  const underCompositeMaterial = new ShaderMaterial({
+    vertexShader: `
+		varying vec2 vUv;
+		void main() {
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+		}`,
+    fragmentShader: `
+        uniform sampler2D tDst;
+        uniform sampler2D tSrc;
+        varying vec2 vUv;
+        void main() {
+          vec4 d = texture2D(tDst, vUv);
+          vec4 s = texture2D(tSrc, vUv);
+          vec3 c = d.a * d.xyz + (1.-d.a)*s.a*s.xyz;
+          float a = s.a - s.a*d.a + d.a;
+          gl_FragColor = vec4(c, a);
+          // gl_FragColor = s;
+        }`,
+    uniforms: {
+      tDst: { value: null },
+      tSrc: { value: null },
+    },
+  });
   return {
     camera: p.camera,
     globalUniforms,
@@ -113,8 +127,14 @@ export function createDepthPeelingContext(p: Parameters): DepthPeelingContext {
     scene: p.scene,
     width: p.width,
     height: p.height,
+    final: new WebGLRenderTarget(p.width, p.height),
+    underCompositeMaterial,
+    quad: new FullScreenQuad(underCompositeMaterial),
+    zero: new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1),
   };
 }
+export type DepthPeelingContext = ReturnType<typeof createDepthPeelingContext>;
+
 const blendingCache = new Map<Mesh, number>();
 export function render(dp: DepthPeelingContext) {
   blendingCache.clear();
@@ -159,6 +179,13 @@ export function render(dp: DepthPeelingContext) {
   dp.renderer.setRenderTarget(dp.layer4);
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
+
+  dp.renderer.setRenderTarget(dp.final);
+  dp.renderer.clear();
+  dp.underCompositeMaterial.uniforms.tDst.value = dp.zero;
+  dp.underCompositeMaterial.uniforms.tSrc.value = dp.layer0.texture;
+  dp.underCompositeMaterial.uniformsNeedUpdate = true;
+  dp.quad.render(dp.renderer);
 
   dp.renderer.setRenderTarget(null);
   // TODO restore blending

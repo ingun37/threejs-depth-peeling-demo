@@ -56,11 +56,11 @@ void main() {
   });
   requestAnimationFrame(() => {
     DP.render(dp);
-    copy.uniforms.tDiffuse.value = dp.layer1.texture;
+    copy.uniforms.tDiffuse.value = dp.final.texture;
     renderer.clear();
     quad.render(renderer);
-    setTimeout(() =>
-      debugRenderTarget(renderer, dp.layer2, width, height, "layer2.png")
-    );
+    setTimeout(() => {
+      debugRenderTarget(renderer, dp.final, width, height, "final.png");
+    });
   });
 }
