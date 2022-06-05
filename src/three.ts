@@ -12,6 +12,7 @@ import {
 import * as DP from "./depth-peeling";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
+import { debugRenderTarget } from "./debug";
 
 export function three(id: string, width: number, height: number) {
   const scene = new Scene();
@@ -55,7 +56,11 @@ void main() {
   });
   requestAnimationFrame(() => {
     DP.render(dp);
-    copy.uniforms.tDiffuse.value = dp.layer4.texture;
+    copy.uniforms.tDiffuse.value = dp.layer1.texture;
+    renderer.clear();
     quad.render(renderer);
+    setTimeout(() =>
+      debugRenderTarget(renderer, dp.layer2, width, height, "layer2.png")
+    );
   });
 }

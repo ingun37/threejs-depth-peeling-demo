@@ -6,7 +6,6 @@ import {
   Mesh,
   NoBlending,
   Scene,
-  ShaderMaterial,
   Vector2,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -137,24 +136,28 @@ export function render(dp: DepthPeelingContext) {
   );
 
   dp.renderer.setRenderTarget(dp.layer1);
+  dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.globalUniforms.uPrevDepthTexture.value = dp.layer1.depthTexture;
   dp.globalUniforms.uLayer.value = 2;
 
   dp.renderer.setRenderTarget(dp.layer2);
+  dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.globalUniforms.uPrevDepthTexture.value = dp.layer2.depthTexture;
   dp.globalUniforms.uLayer.value = 3;
 
   dp.renderer.setRenderTarget(dp.layer3);
+  dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.globalUniforms.uPrevDepthTexture.value = dp.layer3.depthTexture;
   dp.globalUniforms.uLayer.value = 4;
 
   dp.renderer.setRenderTarget(dp.layer4);
+  dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.renderer.setRenderTarget(null);
