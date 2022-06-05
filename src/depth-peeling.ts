@@ -6,6 +6,7 @@ import {
   Mesh,
   NoBlending,
   Scene,
+  ShaderMaterial,
   Vector2,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -22,38 +23,36 @@ export type GlobalUniform = {
   uLayer: IUniform;
   uPrevDepthTexture: IUniform;
   uPrevColorTexture: IUniform;
-  uScreenSize: IUniform;
+  uReciprocalScreenSize: IUniform;
 };
 export type DepthPeelingContext = {
   scene: Scene;
   layer0: WebGLRenderTarget;
+  layer1: WebGLRenderTarget;
   renderer: WebGLRenderer;
   camera: Camera;
   globalUniforms: GlobalUniform;
+  width: number;
+  height: number;
 };
 
-export function createDepthPeelingContext({
-  scene,
-  height,
-  width,
-  renderer,
-  camera,
-}: Parameters): DepthPeelingContext {
+export function createDepthPeelingContext(p: Parameters): DepthPeelingContext {
   let globalUniforms: GlobalUniform = {
     uLayer: { value: 0 },
     uPrevDepthTexture: { value: null },
     uPrevColorTexture: { value: null },
-    uScreenSize: { value: new Vector2(1, 1) },
+    uReciprocalScreenSize: { value: new Vector2(1, 1) },
   };
-  scene.traverse((obj) => {
+  p.scene.traverse((obj) => {
     if (obj instanceof Mesh && obj.material instanceof Material) {
       obj.material.onBeforeCompile = (shader) => {
-        shader.uniforms.uScreenSize = globalUniforms.uScreenSize;
+        shader.uniforms.uReciprocalScreenSize =
+          globalUniforms.uReciprocalScreenSize;
         shader.uniforms.uPrevDepthTexture = globalUniforms.uPrevDepthTexture;
         shader.uniforms.uLayer = globalUniforms.uLayer;
 
         shader.fragmentShader = `
-					uniform vec2 uScreenSize;
+					uniform vec2 uReciprocalScreenSize;
 					uniform sampler2D uPrevDepthTexture;
 					uniform int uLayer;
 
@@ -64,7 +63,7 @@ export function createDepthPeelingContext({
           /}$/gm,
           `
     if( uLayer != 0 ) {
-        vec2 screenPos = gl_FragCoord.xy * uScreenSize;
+        vec2 screenPos = gl_FragCoord.xy * uReciprocalScreenSize;
         float prevDepth = texture2D(uPrevDepthTexture,screenPos).x;
         if( prevDepth >= gl_FragCoord.z ) {
             discard;
@@ -77,37 +76,54 @@ export function createDepthPeelingContext({
       obj.material.needsUpdate = true;
     }
   });
-  const depthT = new DepthTexture(width, height);
-  const layer0 = new WebGLRenderTarget(width, height, {
-    depthTexture: depthT,
+  const depth0 = new DepthTexture(p.width, p.height);
+  const layer0 = new WebGLRenderTarget(p.width, p.height, {
+    depthTexture: depth0,
+  });
+  const depth1 = new DepthTexture(p.width, p.height);
+  const layer1 = new WebGLRenderTarget(p.width, p.height, {
+    depthTexture: depth1,
   });
   return {
-    camera,
+    camera: p.camera,
     globalUniforms,
     layer0,
-    renderer,
-    scene,
+    layer1,
+    renderer: p.renderer,
+    scene: p.scene,
+    width: p.width,
+    height: p.height,
   };
 }
 const blendingCache = new Map<Mesh, number>();
-export function render({
-  scene,
-  renderer,
-  layer0,
-  camera,
-}: DepthPeelingContext) {
+export function render(dp: DepthPeelingContext) {
   blendingCache.clear();
 
-  scene.traverse((obj) => {
+  dp.scene.traverse((obj) => {
     if (obj instanceof Mesh && obj.material instanceof Material) {
       blendingCache.set(obj, obj.material.blending);
       obj.material.blending = NoBlending;
     }
   });
-  renderer.setRenderTarget(layer0);
-  renderer.render(scene, camera);
+  dp.renderer.setRenderTarget(dp.layer0);
+  dp.renderer.render(dp.scene, dp.camera);
 
-  renderer.setRenderTarget(null);
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer0.depthTexture;
+  dp.globalUniforms.uLayer.value = 1;
+  dp.globalUniforms.uReciprocalScreenSize.value = new Vector2(
+    1 / dp.width,
+    1 / dp.height
+  );
+  dp.scene.traverse((obj) => {
+    if (obj instanceof Mesh && obj.material instanceof Material) {
+      (obj.material as ShaderMaterial).uniformsNeedUpdate = true;
+    }
+  });
+
+  dp.renderer.setRenderTarget(dp.layer1);
+  dp.renderer.render(dp.scene, dp.camera);
+
+  dp.renderer.setRenderTarget(null);
   // TODO restore blending
 }
 

@@ -1,6 +1,7 @@
 import {
   AmbientLight,
   DirectionalLight,
+  DoubleSide,
   Mesh,
   PerspectiveCamera,
   Scene,
@@ -37,6 +38,7 @@ void main() {
   gl_FragColor = vec4(N, 0.5);
 }`,
         transparent: true,
+        side: DoubleSide,
       })
     )
   );
@@ -53,7 +55,7 @@ void main() {
   });
   requestAnimationFrame(() => {
     DP.render(dp);
-    copy.uniforms.tDiffuse.value = dp.layer0.texture;
+    copy.uniforms.tDiffuse.value = dp.layer1.texture;
     quad.render(renderer);
   });
 }
