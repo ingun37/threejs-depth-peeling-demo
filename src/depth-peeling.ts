@@ -22,7 +22,6 @@ export type Parameters = {
   height: number;
 };
 export type GlobalUniform = {
-  uLayer: IUniform;
   uPrevDepthTexture: IUniform;
   uPrevColorTexture: IUniform;
   uReciprocalScreenSize: IUniform;
@@ -30,7 +29,6 @@ export type GlobalUniform = {
 
 export function createDepthPeelingContext(p: Parameters) {
   let globalUniforms: GlobalUniform = {
-    uLayer: { value: 0 },
     uPrevDepthTexture: { value: null },
     uPrevColorTexture: { value: null },
     uReciprocalScreenSize: { value: new Vector2(1, 1) },
@@ -41,26 +39,24 @@ export function createDepthPeelingContext(p: Parameters) {
         shader.uniforms.uReciprocalScreenSize =
           globalUniforms.uReciprocalScreenSize;
         shader.uniforms.uPrevDepthTexture = globalUniforms.uPrevDepthTexture;
-        shader.uniforms.uLayer = globalUniforms.uLayer;
-
         shader.fragmentShader = `
-					uniform vec2 uReciprocalScreenSize;
-					uniform sampler2D uPrevDepthTexture;
-					uniform int uLayer;
-
+// --- DEPTH PEELING SHADER CHUNK (START)
+uniform vec2 uReciprocalScreenSize;
+uniform sampler2D uPrevDepthTexture;
+uniform int uLayer;
+// --- DEPTH PEELING SHADER CHUNK (END)
 					${shader.fragmentShader}
 				`;
         //peel depth
         shader.fragmentShader = shader.fragmentShader.replace(
           /}$/gm,
           `
-    if( uLayer != 0 ) {
-        vec2 screenPos = gl_FragCoord.xy * uReciprocalScreenSize;
-        float prevDepth = texture2D(uPrevDepthTexture,screenPos).x;
-        if( prevDepth >= gl_FragCoord.z ) {
-            discard;
-        }
-    }
+// --- DEPTH PEELING SHADER CHUNK (START)
+  vec2 screenPos = gl_FragCoord.xy * uReciprocalScreenSize;
+  float prevDepth = texture2D(uPrevDepthTexture,screenPos).x;
+  if( prevDepth >= gl_FragCoord.z )
+      discard;
+// --- DEPTH PEELING SHADER CHUNK (END)
 }
 					`
         );
@@ -134,6 +130,7 @@ export function createDepthPeelingContext(p: Parameters) {
     underCompositeMaterial,
     quad: new FullScreenQuad(underCompositeMaterial),
     zero: new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1),
+    one: new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1),
   };
 }
 export type DepthPeelingContext = ReturnType<typeof createDepthPeelingContext>;
@@ -148,37 +145,33 @@ export function render(dp: DepthPeelingContext) {
       obj.material.blending = NoBlending;
     }
   });
-  dp.renderer.setRenderTarget(dp.layer0);
-  dp.renderer.render(dp.scene, dp.camera);
 
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer0.depthTexture;
-  dp.globalUniforms.uLayer.value = 1;
   dp.globalUniforms.uReciprocalScreenSize.value = new Vector2(
     1 / dp.width,
     1 / dp.height
   );
 
+  dp.globalUniforms.uPrevDepthTexture.value = dp.one;
+  dp.renderer.setRenderTarget(dp.layer0);
+  dp.renderer.clear();
+  dp.renderer.render(dp.scene, dp.camera);
+
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer0.depthTexture;
   dp.renderer.setRenderTarget(dp.layer1);
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.globalUniforms.uPrevDepthTexture.value = dp.layer1.depthTexture;
-  dp.globalUniforms.uLayer.value = 2;
-
   dp.renderer.setRenderTarget(dp.layer2);
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.globalUniforms.uPrevDepthTexture.value = dp.layer2.depthTexture;
-  dp.globalUniforms.uLayer.value = 3;
-
   dp.renderer.setRenderTarget(dp.layer3);
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
 
   dp.globalUniforms.uPrevDepthTexture.value = dp.layer3.depthTexture;
-  dp.globalUniforms.uLayer.value = 4;
-
   dp.renderer.setRenderTarget(dp.layer4);
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);

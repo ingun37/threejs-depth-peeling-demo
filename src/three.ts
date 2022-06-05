@@ -36,7 +36,7 @@ void main() {
         fragmentShader: `
 varying vec3 N;
 void main() {
-  gl_FragColor = vec4(N, 0.7);
+  gl_FragColor = vec4(N, 0.6);
 }`,
         transparent: true,
         side: DoubleSide,
