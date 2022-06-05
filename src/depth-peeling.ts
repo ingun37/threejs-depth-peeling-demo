@@ -155,27 +155,6 @@ export function render(dp: DepthPeelingContext) {
   dp.renderer.setRenderTarget(dp.layer0);
   dp.renderer.clear();
   dp.renderer.render(dp.scene, dp.camera);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer0.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer1);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer1.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer2);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer2.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer3);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-
-  dp.globalUniforms.uPrevDepthTexture.value = dp.layer3.depthTexture;
-  dp.renderer.setRenderTarget(dp.layer4);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-
   dp.renderer.setRenderTarget(dp.final0);
   dp.renderer.clear();
   dp.underCompositeMaterial.uniforms.tDst.value = dp.zero;
@@ -183,6 +162,10 @@ export function render(dp: DepthPeelingContext) {
   dp.underCompositeMaterial.uniformsNeedUpdate = true;
   dp.quad.render(dp.renderer);
 
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer0.depthTexture;
+  dp.renderer.setRenderTarget(dp.layer1);
+  dp.renderer.clear();
+  dp.renderer.render(dp.scene, dp.camera);
   dp.renderer.setRenderTarget(dp.final1);
   dp.renderer.clear();
   dp.underCompositeMaterial.uniforms.tDst.value = dp.final0.texture;
@@ -190,6 +173,10 @@ export function render(dp: DepthPeelingContext) {
   dp.underCompositeMaterial.uniformsNeedUpdate = true;
   dp.quad.render(dp.renderer);
 
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer1.depthTexture;
+  dp.renderer.setRenderTarget(dp.layer2);
+  dp.renderer.clear();
+  dp.renderer.render(dp.scene, dp.camera);
   dp.renderer.setRenderTarget(dp.final2);
   dp.renderer.clear();
   dp.underCompositeMaterial.uniforms.tDst.value = dp.final1.texture;
@@ -197,6 +184,10 @@ export function render(dp: DepthPeelingContext) {
   dp.underCompositeMaterial.uniformsNeedUpdate = true;
   dp.quad.render(dp.renderer);
 
+  dp.globalUniforms.uPrevDepthTexture.value = dp.layer2.depthTexture;
+  dp.renderer.setRenderTarget(dp.layer3);
+  dp.renderer.clear();
+  dp.renderer.render(dp.scene, dp.camera);
   dp.renderer.setRenderTarget(dp.final3);
   dp.renderer.clear();
   dp.underCompositeMaterial.uniforms.tDst.value = dp.final2.texture;
