@@ -140,7 +140,6 @@ export function render(
   const previousClearColor = new Color();
   dp.renderer.getClearColor(previousClearColor);
   dp.renderer.setClearColor(0x000000, 0);
-
   dp.renderer.setRenderTarget(layerA);
   dp.renderer.clear();
   dp.renderer.setRenderTarget(compositeA);

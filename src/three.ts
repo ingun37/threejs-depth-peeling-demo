@@ -1,8 +1,10 @@
 import {
   AmbientLight,
+  BoxBufferGeometry,
   DirectionalLight,
   DoubleSide,
   Mesh,
+  MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
   ShaderMaterial,
@@ -12,15 +14,16 @@ import {
 import * as DP from "./depth-peeling";
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
-import { debugRenderTarget } from "./debug";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 export function three(id: string, width: number, height: number) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
-
   const renderer = new WebGLRenderer();
   renderer.setSize(width, height);
   document.getElementById(id)!.appendChild(renderer.domElement);
+  camera.position.z = 5;
+
   scene.add(new DirectionalLight());
   scene.add(new AmbientLight(undefined, 0.5));
   scene.add(
@@ -43,10 +46,14 @@ void main() {
       })
     )
   );
-  camera.position.z = 5;
+  scene.add(
+    new Mesh(
+      new BoxBufferGeometry(),
+      new MeshBasicMaterial({ color: 0xf0a000 })
+    )
+  );
 
   const copy = new ShaderMaterial(CopyShader);
-  const quad = new FullScreenQuad(copy);
   const dp = DP.createDepthPeelingContext({
     scene,
     width,
@@ -55,17 +62,14 @@ void main() {
     camera,
     depth: 3,
   });
-  requestAnimationFrame(() => {
-    const final = DP.render(dp, null);
-    // copy.uniforms.tDiffuse.value = final.texture;
-    // renderer.clear();
-    // quad.render(renderer);
-    setTimeout(() => {
-      // debugRenderTarget(renderer, dp.finals[0], width, height, "final0.png");
-      // debugRenderTarget(renderer, dp.finals[1], width, height, "final1.png");
-      // debugRenderTarget(renderer, dp.finals[2], width, height, "final2.png");
-      // debugRenderTarget(renderer, dp.final3, width, height, "final3.png");
-      // debugRenderTarget(renderer, dp.final, width, height, "final.png");
+  const animate = () =>
+    requestAnimationFrame(() => {
+      DP.render(dp, null);
     });
-  });
+
+  const orbit = new OrbitControls(camera, renderer.domElement);
+  orbit.update();
+  orbit.addEventListener("change", animate);
+
+  animate();
 }
