@@ -51,6 +51,9 @@ export class DepthPeeling {
   depth: number;
   one = new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1);
   quad = new FullScreenQuad(this.underCompositeMaterial);
+  blendingCache = new Map<Mesh, number>();
+  screenSize = new Vector2();
+  originalClearColor = new Color();
 
   constructor(p: { width: number; height: number; depth: number }) {
     this.globalUniforms = {
@@ -72,6 +75,7 @@ export class DepthPeeling {
     this.pong = makeRenderTargetTuple();
     this.depth = p.depth;
   }
+
   prepare(scene: Scene) {
     scene.traverse((obj) => {
       if (obj instanceof Mesh && obj.material instanceof Material) {
@@ -105,9 +109,7 @@ uniform sampler2D uPrevDepthTexture;
       }
     });
   }
-  blendingCache = new Map<Mesh, number>();
-  screenSize = new Vector2();
-  originalClearColor = new Color();
+
   render(
     renderer: WebGLRenderer,
     scene: Object3D,

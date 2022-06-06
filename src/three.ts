@@ -9,13 +9,11 @@ import {
   PerspectiveCamera,
   PlaneBufferGeometry,
   Scene,
-  ShaderMaterial,
   SphereBufferGeometry,
   TextureLoader,
   TorusKnotBufferGeometry,
   WebGLRenderer,
 } from "three";
-import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { DepthPeeling } from "./DepthPeeling";
 
