@@ -22,7 +22,8 @@ export async function three(
   id: string,
   width: number,
   height: number,
-  depthRx: Observable<number>
+  depthRx: Observable<number>,
+  screenSizeRx: Observable<[number, number]>
 ) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
@@ -107,5 +108,8 @@ export async function three(
   orbit.update();
   orbit.addEventListener("change", animate);
 
+  screenSizeRx.subscribe(([width, height]) => {
+    renderer.setSize(width, height);
+  });
   animate();
 }

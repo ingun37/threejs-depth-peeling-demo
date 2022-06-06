@@ -125,6 +125,12 @@ uniform sampler2D uPrevDepthTexture;
     });
 
     renderer.getSize(this.screenSize);
+
+    if (
+      this.screenSize.width !== this.ping[0].width ||
+      this.screenSize.height !== this.ping[0].height
+    )
+      this.setScreenSize(this.screenSize.width, this.screenSize.height);
     const width = this.screenSize.width;
     const height = this.screenSize.height;
     this.globalUniforms.uReciprocalScreenSize.value = new Vector2(
@@ -187,6 +193,18 @@ uniform sampler2D uPrevDepthTexture;
   }
   setDepth(depth: number) {
     this.depth = depth;
+  }
+  setScreenSize(width: number, height: number) {
+    (this.globalUniforms.uReciprocalScreenSize.value as Vector2).set(
+      1 / width,
+      1 / height
+    );
+    [this.ping, this.pong].forEach(([rtWithDepth, rtWithoutDepth]) => {
+      rtWithDepth.setSize(width, height);
+      rtWithoutDepth.setSize(width, height);
+      rtWithDepth.depthTexture.dispose();
+      rtWithDepth.depthTexture = new DepthTexture(width, height);
+    });
   }
 }
 
