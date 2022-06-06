@@ -66,7 +66,7 @@ uniform int uLayer;
       obj.material.needsUpdate = true;
     }
   });
-  const [ping, pong] = new Array(2)
+  const [A, B] = new Array(2)
     .fill(0)
     .map((): [WebGLRenderTarget, WebGLRenderTarget] => [
       new WebGLRenderTarget(p.width, p.height, {
@@ -108,29 +108,26 @@ uniform int uLayer;
     height: p.height,
     underCompositeMaterial,
     quad: new FullScreenQuad(underCompositeMaterial),
-    ping: ping,
-    pong: pong,
+    A,
+    B,
     depth: p.depth,
     one: new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1),
-    opaque: new WebGLRenderTarget(p.width, p.height, {
-      depthTexture: new DepthTexture(p.width, p.height),
-    }),
   };
 }
 export type DepthPeelingContext = ReturnType<typeof createDepthPeelingContext>;
 
 const blendingCache = new Map<Mesh, number>();
-const visibilityCache = new Map<Mesh, boolean>();
 export function render(
   dp: DepthPeelingContext,
   renderTarget: WebGLRenderTarget | null | undefined
 ) {
   blendingCache.clear();
 
-  forEachMesh(dp.scene, (obj) => {
-    blendingCache.set(obj, obj.material.blending);
-    visibilityCache.set(obj, obj.visible);
-    obj.material.blending = NoBlending;
+  dp.scene.traverse((obj) => {
+    if (obj instanceof Mesh && obj.material instanceof Material) {
+      blendingCache.set(obj, obj.material.blending);
+      obj.material.blending = NoBlending;
+    }
   });
 
   dp.globalUniforms.uReciprocalScreenSize.value = new Vector2(
@@ -138,8 +135,8 @@ export function render(
     1 / dp.height
   );
 
-  const [layerA, compositeA] = dp.ping;
-  const [layerB, compositeB] = dp.pong;
+  const [layerA, compositeA] = dp.A;
+  const [layerB, compositeB] = dp.B;
   const previousClearColor = new Color();
   dp.renderer.getClearColor(previousClearColor);
   dp.renderer.setClearColor(0x000000, 0);
@@ -147,22 +144,6 @@ export function render(
   dp.renderer.clear();
   dp.renderer.setRenderTarget(compositeA);
   dp.renderer.clear();
-
-  visibilityCache.clear();
-  forEachMesh(dp.scene, (obj) => {
-    if (obj.material.transparent) obj.visible = false;
-    else obj.visible = obj.visible && true;
-  });
-
-  dp.renderer.setRenderTarget(dp.opaque);
-  dp.renderer.clear();
-  dp.renderer.render(dp.scene, dp.camera);
-
-  forEachMesh(dp.scene, (obj) => {
-    if (obj.material.transparent)
-      obj.visible = visibilityCache.get(obj)! && true;
-    else obj.visible = false;
-  });
 
   const [, finalComposite] = new Array(dp.depth).fill(0).reduce(
     (
@@ -199,20 +180,11 @@ export function render(
   );
 
   dp.renderer.setRenderTarget(null);
-
-  forEachMesh(dp.scene, (mesh) => {
-    mesh.visible = visibilityCache.get(mesh)!;
-    mesh.material.blending = blendingCache.get(mesh)!;
-  });
+  // TODO restore blending
+  // TODO restore clear color
   return finalComposite;
 }
 
 export function destroy(context: DepthPeelingContext) {
   throw "unimpl";
-}
-
-function forEachMesh(scene: Scene, f: (mesh: Mesh<any, Material>) => void) {
-  scene.traverse((obj) => {
-    if (obj instanceof Mesh && obj.material instanceof Material) f(obj);
-  });
 }
