@@ -45,7 +45,6 @@ export function createDepthPeelingContext(p: Parameters) {
 // --- DEPTH PEELING SHADER CHUNK (START)
 uniform vec2 uReciprocalScreenSize;
 uniform sampler2D uPrevDepthTexture;
-uniform int uLayer;
 // --- DEPTH PEELING SHADER CHUNK (END)
 					${shader.fragmentShader}
 				`;
