@@ -5,9 +5,12 @@ import {
   DoubleSide,
   Mesh,
   MeshBasicMaterial,
+  MeshPhongMaterial,
+  MeshStandardMaterial,
   PerspectiveCamera,
   Scene,
   ShaderMaterial,
+  SphereBufferGeometry,
   TorusKnotBufferGeometry,
   WebGLRenderer,
 } from "three";
@@ -24,28 +27,33 @@ export function three(id: string, width: number, height: number) {
   document.getElementById(id)!.appendChild(renderer.domElement);
   camera.position.z = 5;
 
-  scene.add(new DirectionalLight());
+  renderer.shadowMap.enabled = true;
+
+  const dirLight = new DirectionalLight();
+  dirLight.position.set(0, 3, 0);
+  dirLight.castShadow = true;
+  scene.add(dirLight);
   scene.add(new AmbientLight(undefined, 0.5));
-  scene.add(
-    new Mesh(
-      new TorusKnotBufferGeometry(),
-      new ShaderMaterial({
-        vertexShader: `
-varying vec3 N;
-void main() {
-  N = normal; 
-  gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4( position, 1.0 );
-}`,
-        fragmentShader: `
-varying vec3 N;
-void main() {
-  gl_FragColor = vec4(N, 0.6);
-}`,
-        transparent: true,
-        side: DoubleSide,
-      })
-    )
+
+  const sphere = new Mesh(
+    new SphereBufferGeometry(),
+    new MeshStandardMaterial()
   );
+  sphere.translateY(3).translateX(1.5);
+  sphere.castShadow = true;
+  scene.add(sphere);
+
+  const knot = new Mesh(
+    new TorusKnotBufferGeometry(undefined, undefined, 128, 32),
+    new MeshStandardMaterial({
+      transparent: true,
+      opacity: 0.7,
+      side: DoubleSide,
+    })
+  );
+  knot.receiveShadow = true;
+  scene.add(knot);
+
   scene.add(
     new Mesh(
       new BoxBufferGeometry(),
@@ -64,6 +72,7 @@ void main() {
   });
   const animate = () =>
     requestAnimationFrame(() => {
+      // renderer.render(scene, camera);
       DP.render(dp, null);
     });
 
