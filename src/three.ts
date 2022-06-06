@@ -8,9 +8,11 @@ import {
   MeshPhongMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
+  PlaneBufferGeometry,
   Scene,
   ShaderMaterial,
   SphereBufferGeometry,
+  TextureLoader,
   TorusKnotBufferGeometry,
   WebGLRenderer,
 } from "three";
@@ -19,7 +21,7 @@ import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-export function three(id: string, width: number, height: number) {
+export async function three(id: string, width: number, height: number) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
   const renderer = new WebGLRenderer();
@@ -61,6 +63,21 @@ export function three(id: string, width: number, height: number) {
     )
   );
 
+  const texture = await new TextureLoader().loadAsync("/sprite0.png");
+  const plane = new Mesh(
+    new PlaneBufferGeometry(3, 3),
+    new MeshStandardMaterial({ map: texture })
+  );
+  plane.translateX(-1.6);
+  plane.translateY(1.5);
+  scene.add(plane);
+
+  const plane2 = new Mesh(
+    new PlaneBufferGeometry(3, 3),
+    new MeshStandardMaterial({ map: texture, transparent: true })
+  );
+  plane2.translateX(-1.6).translateY(-1.5);
+  scene.add(plane2);
   const copy = new ShaderMaterial(CopyShader);
   const dp = DP.createDepthPeelingContext({
     scene,
