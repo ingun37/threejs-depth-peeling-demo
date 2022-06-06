@@ -16,8 +16,14 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { DepthPeeling } from "./DepthPeeling";
+import { Observable } from "rxjs";
 
-export async function three(id: string, width: number, height: number) {
+export async function three(
+  id: string,
+  width: number,
+  height: number,
+  depthRx: Observable<number>
+) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
   const renderer = new WebGLRenderer();
@@ -93,6 +99,10 @@ export async function three(id: string, width: number, height: number) {
       dp.render(renderer, scene, camera, null);
     });
 
+  depthRx.subscribe((n) => {
+    dp.setDepth(n);
+    animate();
+  });
   const orbit = new OrbitControls(camera, renderer.domElement);
   orbit.update();
   orbit.addEventListener("change", animate);

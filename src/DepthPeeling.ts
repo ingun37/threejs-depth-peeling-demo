@@ -17,12 +17,12 @@ import {
 import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 
 export class DepthPeeling {
-  globalUniforms: {
+  private globalUniforms: {
     uPrevDepthTexture: IUniform;
     uPrevColorTexture: IUniform;
     uReciprocalScreenSize: IUniform;
   };
-  underCompositeMaterial = new ShaderMaterial({
+  private underCompositeMaterial = new ShaderMaterial({
     vertexShader: `
 		varying vec2 vUv;
 		void main() {
@@ -46,14 +46,14 @@ export class DepthPeeling {
       tSrc: { value: null },
     },
   });
-  ping: [WebGLRenderTarget, WebGLRenderTarget];
-  pong: [WebGLRenderTarget, WebGLRenderTarget];
-  depth: number;
-  one = new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1);
-  quad = new FullScreenQuad(this.underCompositeMaterial);
-  blendingCache = new Map<Mesh, number>();
-  screenSize = new Vector2();
-  originalClearColor = new Color();
+  private ping: [WebGLRenderTarget, WebGLRenderTarget];
+  private pong: [WebGLRenderTarget, WebGLRenderTarget];
+  private depth: number;
+  private one = new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1);
+  private quad = new FullScreenQuad(this.underCompositeMaterial);
+  private blendingCache = new Map<Mesh, number>();
+  private screenSize = new Vector2();
+  private originalClearColor = new Color();
 
   constructor(p: { width: number; height: number; depth: number }) {
     this.globalUniforms = {
@@ -181,6 +181,12 @@ uniform sampler2D uPrevDepthTexture;
       mesh.material.blending = this.blendingCache.get(mesh)!;
     });
     return finalComposite;
+  }
+  getDepth() {
+    return this.depth;
+  }
+  setDepth(depth: number) {
+    this.depth = depth;
   }
 }
 

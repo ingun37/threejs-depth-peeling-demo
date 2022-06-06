@@ -3,7 +3,7 @@ import Everything from "./everything";
 
 // styles
 const pageStyles = {
-  backgroundColor: "#000000",
+  backgroundColor: "white",
   color: "#232129",
   padding: 96,
   fontFamily: "-apple-system, Roboto, sans-serif, serif",
