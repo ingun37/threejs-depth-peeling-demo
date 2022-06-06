@@ -5,7 +5,6 @@ import {
   DoubleSide,
   Mesh,
   MeshBasicMaterial,
-  MeshPhongMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
   PlaneBufferGeometry,
@@ -16,10 +15,9 @@ import {
   TorusKnotBufferGeometry,
   WebGLRenderer,
 } from "three";
-import * as DP from "./depth-peeling";
-import { FullScreenQuad } from "three/examples/jsm/postprocessing/Pass";
 import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { DepthPeeling } from "./DepthPeeling";
 
 export async function three(id: string, width: number, height: number) {
   const scene = new Scene();
@@ -66,7 +64,7 @@ export async function three(id: string, width: number, height: number) {
   const texture = await new TextureLoader().loadAsync("/sprite0.png");
   const plane = new Mesh(
     new PlaneBufferGeometry(3, 3),
-    new MeshStandardMaterial({ map: texture })
+    new MeshStandardMaterial({ map: texture, side: DoubleSide })
   );
   plane.translateX(-1.6);
   plane.translateY(1.5);
@@ -74,23 +72,27 @@ export async function three(id: string, width: number, height: number) {
 
   const plane2 = new Mesh(
     new PlaneBufferGeometry(3, 3),
-    new MeshStandardMaterial({ map: texture, transparent: true })
+    new MeshStandardMaterial({
+      map: texture,
+      transparent: true,
+      side: DoubleSide,
+    })
   );
-  plane2.translateX(-1.6).translateY(-1.5);
+  plane2
+    .translateX(-1.2)
+    .translateY(-1.5)
+    .translateZ(0)
+    .rotateY(-2 * Math.PI * (1 / 10));
   scene.add(plane2);
-  const copy = new ShaderMaterial(CopyShader);
-  const dp = DP.createDepthPeelingContext({
-    scene,
-    width,
-    height,
-    renderer,
-    camera,
+  const dp = new DepthPeeling({
     depth: 3,
+    height,
+    width,
   });
+  dp.prepare(scene);
   const animate = () =>
     requestAnimationFrame(() => {
-      // renderer.render(scene, camera);
-      DP.render(dp, null);
+      dp.render(renderer, scene, camera, null);
     });
 
   const orbit = new OrbitControls(camera, renderer.domElement);

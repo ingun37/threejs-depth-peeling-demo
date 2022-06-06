@@ -55,7 +55,7 @@ uniform sampler2D uPrevDepthTexture;
 // --- DEPTH PEELING SHADER CHUNK (START)
   vec2 screenPos = gl_FragCoord.xy * uReciprocalScreenSize;
   float prevDepth = texture2D(uPrevDepthTexture,screenPos).x;
-  if( prevDepth >= gl_FragCoord.z )
+  if( prevDepth + 0.00001 >= gl_FragCoord.z )
       discard;
 // --- DEPTH PEELING SHADER CHUNK (END)
 }
