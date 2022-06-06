@@ -66,7 +66,7 @@ uniform int uLayer;
       obj.material.needsUpdate = true;
     }
   });
-  const [A, B] = new Array(2)
+  const [ping, pong] = new Array(2)
     .fill(0)
     .map((): [WebGLRenderTarget, WebGLRenderTarget] => [
       new WebGLRenderTarget(p.width, p.height, {
@@ -108,8 +108,8 @@ uniform int uLayer;
     height: p.height,
     underCompositeMaterial,
     quad: new FullScreenQuad(underCompositeMaterial),
-    A,
-    B,
+    ping: ping,
+    pong: pong,
     depth: p.depth,
     one: new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1),
   };
@@ -123,11 +123,9 @@ export function render(
 ) {
   blendingCache.clear();
 
-  dp.scene.traverse((obj) => {
-    if (obj instanceof Mesh && obj.material instanceof Material) {
-      blendingCache.set(obj, obj.material.blending);
-      obj.material.blending = NoBlending;
-    }
+  forEachMesh(dp.scene, (obj) => {
+    blendingCache.set(obj, obj.material.blending);
+    obj.material.blending = NoBlending;
   });
 
   dp.globalUniforms.uReciprocalScreenSize.value = new Vector2(
@@ -135,8 +133,8 @@ export function render(
     1 / dp.height
   );
 
-  const [layerA, compositeA] = dp.A;
-  const [layerB, compositeB] = dp.B;
+  const [layerA, compositeA] = dp.ping;
+  const [layerB, compositeB] = dp.pong;
   const previousClearColor = new Color();
   dp.renderer.getClearColor(previousClearColor);
   dp.renderer.setClearColor(0x000000, 0);
@@ -180,11 +178,19 @@ export function render(
   );
 
   dp.renderer.setRenderTarget(null);
-  // TODO restore blending
-  // TODO restore clear color
+
+  forEachMesh(dp.scene, (mesh) => {
+    mesh.material.blending = blendingCache.get(mesh)!;
+  });
   return finalComposite;
 }
 
 export function destroy(context: DepthPeelingContext) {
   throw "unimpl";
+}
+
+function forEachMesh(scene: Scene, f: (mesh: Mesh<any, Material>) => void) {
+  scene.traverse((obj) => {
+    if (obj instanceof Mesh && obj.material instanceof Material) f(obj);
+  });
 }
