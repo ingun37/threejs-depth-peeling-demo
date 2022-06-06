@@ -85,7 +85,7 @@ export class DepthPeeling {
           shader.uniforms.uPrevDepthTexture =
             this.globalUniforms.uPrevDepthTexture;
           shader.fragmentShader = `
-// --- DEPTH PEELING SHADER CHUNK (START)
+// --- DEPTH PEELING SHADER CHUNK (START) (uniform definition)
 uniform vec2 uReciprocalScreenSize;
 uniform sampler2D uPrevDepthTexture;
 // --- DEPTH PEELING SHADER CHUNK (END)
@@ -95,7 +95,7 @@ uniform sampler2D uPrevDepthTexture;
           shader.fragmentShader = shader.fragmentShader.replace(
             /}$/gm,
             `
-// --- DEPTH PEELING SHADER CHUNK (START)
+// --- DEPTH PEELING SHADER CHUNK (START) (peeling)
   vec2 screenPos = gl_FragCoord.xy * uReciprocalScreenSize;
   float prevDepth = texture2D(uPrevDepthTexture,screenPos).x;
   if( prevDepth + 0.00001 >= gl_FragCoord.z )
