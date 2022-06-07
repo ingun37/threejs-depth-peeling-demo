@@ -66,7 +66,9 @@ export async function three(
     )
   );
 
-  const texture = await new TextureLoader().loadAsync("/sprite0.png");
+  const texture = await new TextureLoader().loadAsync(
+    "/threejs-depth-peeling-demo/sprite0.png"
+  );
   const plane = new Mesh(
     new PlaneBufferGeometry(3, 3),
     new MeshStandardMaterial({ map: texture, side: DoubleSide })
