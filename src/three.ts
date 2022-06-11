@@ -117,4 +117,5 @@ export async function three(
     renderer.setSize(width, height);
   });
   animate();
+  enableRx.subscribe(animate);
 }
