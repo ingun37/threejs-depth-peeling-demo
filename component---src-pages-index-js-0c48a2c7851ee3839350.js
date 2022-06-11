@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkweb_depth_peel_demo=self.webpackChunkweb_depth_peel_demo||[]).push([[678],{6558:function(e,t,l){l.r(t);var n=l(7294),a=l(711),o={backgroundColor:"white",color:"#232129",padding:96,fontFamily:"-apple-system, Roboto, sans-serif, serif"};t.default=function(){return n.createElement("main",{style:o},n.createElement(a.default,null))}}}]);
+//# sourceMappingURL=component---src-pages-index-js-0c48a2c7851ee3839350.js.map
