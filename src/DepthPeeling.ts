@@ -51,10 +51,9 @@ export class DepthPeeling {
   private depth: number;
   private one = new DataTexture(new Uint8Array([1, 1, 1, 1]), 1, 1);
   private quad = new FullScreenQuad(this.underCompositeMaterial);
-  private blendingCache = new Map<Mesh, number>();
   private screenSize = new Vector2();
   private originalClearColor = new Color();
-
+  private ownScene = new Scene();
   constructor(p: { width: number; height: number; depth: number }) {
     this.globalUniforms = {
       uPrevDepthTexture: { value: null },
@@ -76,10 +75,13 @@ export class DepthPeeling {
     this.depth = p.depth;
   }
 
-  prepare(scene: Scene) {
-    scene.traverse((obj) => {
+  add(sceneGraph: Object3D) {
+    const clonedScene = sceneGraph.clone(true);
+    clonedScene.traverse((obj) => {
       if (obj instanceof Mesh && obj.material instanceof Material) {
-        obj.material.onBeforeCompile = (shader) => {
+        const clonedMaterial = obj.material.clone();
+        clonedMaterial.blending = NoBlending;
+        clonedMaterial.onBeforeCompile = (shader) => {
           shader.uniforms.uReciprocalScreenSize =
             this.globalUniforms.uReciprocalScreenSize;
           shader.uniforms.uPrevDepthTexture =
@@ -105,25 +107,19 @@ uniform sampler2D uPrevDepthTexture;
 					`
           );
         };
+        obj.material = clonedMaterial;
         obj.material.needsUpdate = true;
       }
     });
+    this.ownScene.add(clonedScene);
   }
 
   render(
     renderer: WebGLRenderer,
-    scene: Object3D,
     camera: Camera,
     renderTarget: WebGLRenderTarget | null | undefined
   ) {
     const originalRenderTarget = renderer.getRenderTarget();
-    this.blendingCache.clear();
-
-    forEachMesh(scene, (obj) => {
-      this.blendingCache.set(obj, obj.material.blending);
-      obj.material.blending = NoBlending;
-    });
-
     renderer.getSize(this.screenSize);
 
     if (
@@ -160,7 +156,7 @@ uniform sampler2D uPrevDepthTexture;
           idx === 0 ? this.one : prevDepth.depthTexture;
         renderer.setRenderTarget(otherLayer);
         renderer.clear();
-        renderer.render(scene, camera);
+        renderer.render(this.ownScene, camera);
 
         renderer.setRenderTarget(
           idx < this.depth - 1
@@ -183,9 +179,6 @@ uniform sampler2D uPrevDepthTexture;
 
     renderer.setRenderTarget(originalRenderTarget);
 
-    forEachMesh(scene, (mesh) => {
-      mesh.material.blending = this.blendingCache.get(mesh)!;
-    });
     return finalComposite;
   }
   getDepth() {

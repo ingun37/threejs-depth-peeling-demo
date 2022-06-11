@@ -8,24 +8,36 @@ import {
   Stack,
   TextField,
   Button,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import { range } from "fp-ts/NonEmptyArray";
-import { Subject } from "rxjs";
+import { BehaviorSubject, Subject } from "rxjs";
 const id = "everything";
 const defaultWidth = 1024;
 const defaultHeight = 1024;
 const maxDepth = 5;
 const depthRx = new Subject<number>();
 const screenSizeRx = new Subject<[number, number]>();
+const enableRx = new BehaviorSubject<boolean>(true);
 export default function Everything() {
   useEffect(() => {
-    three(id, defaultWidth, defaultHeight, depthRx, screenSizeRx);
+    three(id, defaultWidth, defaultHeight, depthRx, screenSizeRx, enableRx);
   }, []);
   const [width, setWidth] = useState(defaultWidth);
   const [height, setHeight] = useState(defaultHeight);
   return (
     <div>
       <Stack spacing={3}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              defaultChecked
+              onChange={(e) => enableRx.next(e.target.checked)}
+            />
+          }
+          label="Enabled"
+        />
         <Typography>Depth</Typography>
         <Slider
           aria-label="Temperature"

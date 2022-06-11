@@ -16,14 +16,15 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { DepthPeeling } from "./DepthPeeling";
-import { Observable } from "rxjs";
+import { BehaviorSubject, Observable } from "rxjs";
 
 export async function three(
   id: string,
   width: number,
   height: number,
   depthRx: Observable<number>,
-  screenSizeRx: Observable<[number, number]>
+  screenSizeRx: Observable<[number, number]>,
+  enableRx: BehaviorSubject<boolean>
 ) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
@@ -96,10 +97,12 @@ export async function three(
     height,
     width,
   });
-  dp.prepare(scene);
+  dp.add(scene);
   const animate = () =>
     requestAnimationFrame(() => {
-      dp.render(renderer, scene, camera, null);
+      enableRx.getValue()
+        ? dp.render(renderer, camera, null)
+        : renderer.render(scene, camera);
     });
 
   depthRx.subscribe((n) => {
