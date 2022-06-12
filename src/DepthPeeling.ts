@@ -21,8 +21,10 @@ import { CopyShader } from "three/examples/jsm/shaders/CopyShader";
 export class DepthPeeling {
   private globalUniforms: {
     uPrevDepthTexture: IUniform;
-    uPrevColorTexture: IUniform;
     uReciprocalScreenSize: IUniform;
+  } = {
+    uPrevDepthTexture: { value: null },
+    uReciprocalScreenSize: { value: new Vector2(1, 1) },
   };
 
   layers: Array<WebGLRenderTarget> = [];
@@ -40,12 +42,6 @@ export class DepthPeeling {
   private originalClearColor = new Color();
   private ownScene = new Scene();
   constructor(p: { width: number; height: number; depth: number }) {
-    this.globalUniforms = {
-      uPrevDepthTexture: { value: null },
-      uPrevColorTexture: { value: null },
-      uReciprocalScreenSize: { value: new Vector2(1, 1) },
-    };
-
     this.setScreenSize(p.width, p.height);
     this.setDepth(p.depth);
   }
@@ -93,19 +89,6 @@ uniform sampler2D uPrevDepthTexture;
     const originalRenderTarget = renderer.getRenderTarget();
     const originalAutoClear = renderer.autoClear;
     renderer.autoClear = false;
-    renderer.getSize(this.screenSize);
-
-    if (
-      this.screenSize.width !== this.layers[0].width ||
-      this.screenSize.height !== this.layers[0].height
-    )
-      this.setScreenSize(this.screenSize.width, this.screenSize.height);
-    const width = this.screenSize.width;
-    const height = this.screenSize.height;
-    this.globalUniforms.uReciprocalScreenSize.value = new Vector2(
-      1 / width,
-      1 / height
-    );
 
     renderer.getClearColor(this.originalClearColor);
     renderer.setClearColor(0x000000);
@@ -150,6 +133,7 @@ uniform sampler2D uPrevDepthTexture;
     this.depth = depth;
   }
   setScreenSize(width: number, height: number) {
+    this.screenSize.set(width, height);
     (this.globalUniforms.uReciprocalScreenSize.value as Vector2).set(
       1 / width,
       1 / height
