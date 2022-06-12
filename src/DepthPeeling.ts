@@ -39,10 +39,16 @@ export class DepthPeeling {
     })
   );
   private screenSize = new Vector2();
+  private pixelRatio = 1;
   private originalClearColor = new Color();
   private ownScene = new Scene();
-  constructor(p: { width: number; height: number; depth: number }) {
-    this.setScreenSize(p.width, p.height);
+  constructor(p: {
+    width: number;
+    height: number;
+    depth: number;
+    pixelRatio: number;
+  }) {
+    this.setScreenSize(p.width, p.height, p.pixelRatio);
     this.setDepth(p.depth);
   }
 
@@ -119,30 +125,32 @@ uniform sampler2D uPrevDepthTexture;
   setDepth(depth: number) {
     while (depth < this.layers.length) this.layers.pop()?.dispose();
 
+    const w = this.screenSize.width * this.pixelRatio;
+    const h = this.screenSize.height * this.pixelRatio;
     while (this.layers.length < depth)
       this.layers.push(
-        new WebGLRenderTarget(this.screenSize.width, this.screenSize.height, {
-          depthTexture: new DepthTexture(
-            this.screenSize.width,
-            this.screenSize.height
-          ),
+        new WebGLRenderTarget(w, h, {
+          depthTexture: new DepthTexture(w, h),
           // samples: 2,
         })
       );
 
     this.depth = depth;
   }
-  setScreenSize(width: number, height: number) {
+  setScreenSize(width: number, height: number, pixelRatio: number) {
     this.screenSize.set(width, height);
+    this.pixelRatio = pixelRatio;
+    const w = width * pixelRatio;
+    const h = height * pixelRatio;
     (this.globalUniforms.uReciprocalScreenSize.value as Vector2).set(
-      1 / width,
-      1 / height
+      1 / w,
+      1 / h
     );
 
     this.layers.forEach((rt) => {
-      rt.setSize(width, height);
+      rt.setSize(w, h);
       rt.depthTexture.dispose();
-      rt.depthTexture = new DepthTexture(width, height);
+      rt.depthTexture = new DepthTexture(w, h);
     });
   }
 }

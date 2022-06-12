@@ -30,6 +30,7 @@ export async function three(
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
   const renderer = new WebGLRenderer();
   renderer.setSize(width, height);
+  renderer.setPixelRatio(devicePixelRatio);
   document.getElementById(id)!.appendChild(renderer.domElement);
   camera.position.z = 5;
 
@@ -96,6 +97,7 @@ export async function three(
     depth: 3,
     height,
     width,
+    pixelRatio: renderer.getPixelRatio(),
   });
   dp.add(scene);
   const animate = () =>
