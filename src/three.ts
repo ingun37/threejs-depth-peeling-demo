@@ -101,7 +101,7 @@ export async function three(
   const animate = () =>
     requestAnimationFrame(() => {
       enableRx.getValue()
-        ? dp.render(renderer, camera, null)
+        ? dp.render(renderer, camera)
         : renderer.render(scene, camera);
     });
 
@@ -118,4 +118,17 @@ export async function three(
   });
   animate();
   enableRx.subscribe(animate);
+
+  (window as any).debugLayers = () => {
+    dp.layers.forEach((layer, idx) => {
+      const buf = new Uint8Array(width * height * 4);
+      const url = new URL("http://0.0.0.0:7890/png");
+      url.searchParams.set("width", width.toString());
+      url.searchParams.set("height", height.toString());
+      renderer.readRenderTargetPixels(layer, 0, 0, width, height, buf);
+      const body = new FormData();
+      body.append("pixels", new Blob([buf]), `layer${idx}.png`);
+      fetch(url.toString(), { method: "POST", body });
+    });
+  };
 }
