@@ -4,13 +4,15 @@ import {
   DoubleSide,
   InstancedMesh,
   IUniform,
+  Material,
   Matrix4,
   MeshBasicMaterial,
+  Object3D,
   PerspectiveCamera,
   Scene,
   SphereBufferGeometry,
 } from "three";
-import { Observable, Subscription } from "rxjs";
+import { debounceTime, Observable, Subscription } from "rxjs";
 
 export class Indicators {
   instances: InstancedMesh;
@@ -22,7 +24,8 @@ export class Indicators {
     initialScreenHeight: number,
     circleSegment: number,
     radius: number,
-    private cameraMoveRx: Observable<any>
+    private cameraMoveRx: Observable<any>,
+    render: () => void
   ) {
     this.standardZ = {
       value: initialScreenHeight / (2 * Math.tan(camera.fov / 2)),
@@ -43,6 +46,13 @@ export class Indicators {
     this.instances = new InstancedMesh(g, m2, 100);
     this.instances.count = 0;
     scene.add(this.instances);
+    cameraMoveRx.subscribe(() => {
+      this.instances.visible = true;
+    });
+    cameraMoveRx.pipe(debounceTime(300)).subscribe(() => {
+      this.instances.visible = false;
+      render();
+    });
   }
 
   subscribe(p: { x: number; y: number; z: number }) {

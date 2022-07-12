@@ -36,20 +36,31 @@ export async function three2(
   scene.add(dirLight);
   scene.add(new AmbientLight(undefined, 0.5));
 
-  scene.add(new Mesh(new TeapotGeometry(), new MeshStandardMaterial()));
+  const teapot = new Mesh(new TeapotGeometry(), new MeshStandardMaterial());
+  scene.add(teapot);
   const moveRx = new Subject();
   const animate = () =>
     requestAnimationFrame(() => {
-      moveRx.next(0);
       renderer.clear();
       renderer.render(scene, camera);
     });
 
   const orbit = new OrbitControls(camera, renderer.domElement);
   orbit.update();
-  orbit.addEventListener("change", animate);
+  orbit.addEventListener("change", () => {
+    animate();
+    moveRx.next(0);
+  });
 
-  const indicators = new Indicators(scene, camera, height, 16, 10, moveRx);
+  const indicators = new Indicators(
+    scene,
+    camera,
+    height,
+    16,
+    10,
+    moveRx,
+    animate
+  );
 
   animate();
   const raycaster = new Raycaster();
@@ -59,7 +70,7 @@ export async function three2(
     pointer.set(x, y);
     raycaster.setFromCamera(pointer, camera);
     const intersects = raycaster
-      .intersectObjects(scene.children)
+      .intersectObject(teapot)
       .sort((x, y) => (x.distance < y.distance ? -1 : 1));
     if (0 < intersects.length) {
       const head = intersects[0];
