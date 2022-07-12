@@ -1,29 +1,16 @@
 import {
   AmbientLight,
-  BasicDepthPacking,
-  BoxBufferGeometry,
   DirectionalLight,
-  DoubleSide,
-  FloatType,
   Mesh,
-  MeshBasicMaterial,
-  MeshDepthMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
-  PlaneBufferGeometry,
   Raycaster,
   Scene,
-  SphereBufferGeometry,
-  TextureLoader,
-  TorusKnotBufferGeometry,
   Vector2,
-  Vector3,
   WebGLRenderer,
-  WebGLRenderTarget,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { DepthPeeling } from "./DepthPeeling";
-import { BehaviorSubject, Observable, Subject } from "rxjs";
+import { Observable, Subject } from "rxjs";
 import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry";
 import { Indicators } from "./Indicators";
 
@@ -62,7 +49,7 @@ export async function three2(
   orbit.update();
   orbit.addEventListener("change", animate);
 
-  const indicators = new Indicators(scene, 16, moveRx);
+  const indicators = new Indicators(scene, camera, height, 16, 10, moveRx);
 
   animate();
   const raycaster = new Raycaster();
