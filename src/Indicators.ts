@@ -36,6 +36,7 @@ export enum IndicatorEnabled {
 
 export enum SubscriberEvent {
   Unsubscribed,
+  Moved,
 }
 
 export class Indicators {
@@ -46,6 +47,7 @@ export class Indicators {
   uniqueColor: Color;
   subscribersEvent = new Subject<SubscriberEvent>();
   pruneRx = new Subject();
+  moveRx = new Subject();
   constructor(
     private renderer: WebGLRenderer,
     scene: Scene,
@@ -87,6 +89,9 @@ export class Indicators {
         })
       )
       .subscribe(this.pruneRx);
+    this.subscribersEvent
+      .pipe(filter((e) => e === SubscriberEvent.Moved))
+      .subscribe(this.moveRx);
   }
 
   subscribe(
@@ -148,7 +153,7 @@ export class Indicators {
         callback(indicatorEnabled, isVisible);
       });
     subscription.add(
-      merge(this.cameraMoveRx, this.pruneRx).subscribe(() => {
+      merge(this.cameraMoveRx, this.pruneRx, this.moveRx).subscribe(() => {
         const idx = this.subscriptions.indexOf(subscription);
         if (idx === -1) throw new Error("Failed to find subscription");
         const viewP = pV3
@@ -184,6 +189,7 @@ class IndicatorSubscription {
   }
   move(x: number, y: number, z: number) {
     this.translationMatrix.makeTranslation(x, y, z);
+    this.events.next(SubscriberEvent.Moved);
   }
 }
 function scale255(f0to1: number) {
