@@ -54,7 +54,11 @@ export class Indicators {
     this.standardZ = initialScreenHeight / (2 * Math.tan(camera.fov / 2));
     // const g = circleGeometry(circleSegment, radius);
     const g = new SphereBufferGeometry(radius);
-    const m2 = new MeshBasicMaterial({ side: DoubleSide, color });
+    const m2 = new MeshBasicMaterial({
+      side: DoubleSide,
+      color,
+      depthWrite: false,
+    });
     this.instances = new InstancedMesh(g, m2, 100);
     this.instances.count = 0;
     scene.add(this.instances);
