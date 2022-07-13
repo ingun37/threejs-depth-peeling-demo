@@ -20,6 +20,7 @@ import {
   auditTime,
   debounceTime,
   distinctUntilChanged,
+  filter,
   map,
   merge,
   Observable,
@@ -33,12 +34,18 @@ export enum IndicatorEnabled {
   HIDDEN,
 }
 
+export enum SubscriberEvent {
+  Unsubscribed,
+}
+
 export class Indicators {
   instances: InstancedMesh;
   subscriptions: Subscription[] = [];
   indicatorVisibilityRx = new Subject<IndicatorEnabled>();
   standardZ: number;
   uniqueColor: Color;
+  subscribersEvent = new Subject<SubscriberEvent>();
+  pruneRx = new Subject();
   constructor(
     private renderer: WebGLRenderer,
     scene: Scene,
@@ -68,14 +75,18 @@ export class Indicators {
         debounceTime(300),
         map(() => IndicatorEnabled.HIDDEN)
       )
-    )
+    ).subscribe(this.indicatorVisibilityRx);
+
+    this.subscribersEvent
       .pipe(
+        filter((e) => e === SubscriberEvent.Unsubscribed),
         tap(() => {
           this.subscriptions = this.subscriptions.filter((x) => !x.closed);
           this.instances.count = this.subscriptions.length;
+          render();
         })
       )
-      .subscribe(this.indicatorVisibilityRx);
+      .subscribe(this.pruneRx);
   }
 
   subscribe(
@@ -99,21 +110,6 @@ export class Indicators {
     const pixelBuffer = new Uint8Array(4);
     const subscription = this.indicatorVisibilityRx
       .pipe(
-        tap((visibility) => {
-          if (visibility === IndicatorEnabled.SHOWN) {
-            const idx = this.subscriptions.indexOf(subscription);
-            if (idx === -1) throw new Error("Failed to find subscription");
-            const viewP = pV3
-              .set(t.elements[12], t.elements[13], t.elements[14])
-              .applyMatrix4(this.camera.matrixWorldInverse);
-            const fixedSizeScale = (size * -viewP.z) / this.standardZ;
-
-            s.makeScale(fixedSizeScale, fixedSizeScale, fixedSizeScale);
-            transform.identity().multiply(t).multiply(s);
-            this.instances.setMatrixAt(idx, transform);
-            this.instances.instanceMatrix.needsUpdate = true;
-          }
-        }),
         distinctUntilChanged()
         // auditTime(0, animationFrameScheduler)
       )
@@ -151,18 +147,40 @@ export class Indicators {
 
         callback(indicatorEnabled, isVisible);
       });
+    subscription.add(
+      merge(this.cameraMoveRx, this.pruneRx).subscribe(() => {
+        const idx = this.subscriptions.indexOf(subscription);
+        if (idx === -1) throw new Error("Failed to find subscription");
+        const viewP = pV3
+          .set(t.elements[12], t.elements[13], t.elements[14])
+          .applyMatrix4(this.camera.matrixWorldInverse);
+        const fixedSizeScale = (size * -viewP.z) / this.standardZ;
+
+        s.makeScale(fixedSizeScale, fixedSizeScale, fixedSizeScale);
+        transform.identity().multiply(t).multiply(s);
+        this.instances.setMatrixAt(idx, transform);
+        this.instances.instanceMatrix.needsUpdate = true;
+        this.render();
+      })
+    );
     this.subscriptions.push(subscription);
-    return new IndicatorSubscription(subscription, t);
+
+    const isub = new IndicatorSubscription(subscription, t);
+    isub.events.subscribe((e) => this.subscribersEvent.next(e));
+    return isub;
   }
 }
 
 class IndicatorSubscription {
+  events = new Subject<SubscriberEvent>();
   constructor(
     private subscription: Subscription,
     private translationMatrix: Matrix4
   ) {}
   unsubscribe() {
     this.subscription.unsubscribe();
+    this.events.next(SubscriberEvent.Unsubscribed);
+    this.events.complete();
   }
   move(x: number, y: number, z: number) {
     this.translationMatrix.makeTranslation(x, y, z);
