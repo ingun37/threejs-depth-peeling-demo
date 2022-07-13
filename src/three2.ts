@@ -22,7 +22,7 @@ export async function three2(
 ) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(75, width / height, 0.1, 1000);
-  const renderer = new WebGLRenderer();
+  const renderer = new WebGLRenderer({ preserveDrawingBuffer: true });
   renderer.setSize(width, height);
   renderer.setClearAlpha(0);
 
@@ -53,11 +53,13 @@ export async function three2(
   });
 
   const indicators = new Indicators(
+    renderer,
     scene,
     camera,
     height,
     16,
     10,
+    0xff00ff,
     moveRx,
     animate
   );
@@ -74,12 +76,26 @@ export async function three2(
       .sort((x, y) => (x.distance < y.distance ? -1 : 1));
     if (0 < intersects.length) {
       const head = intersects[0];
-      indicators.subscribe({
-        x: head.point.x,
-        y: head.point.y,
-        z: head.point.z,
-      });
+      const s = indicators.subscribe(
+        {
+          x: head.point.x,
+          y: head.point.y,
+          z: head.point.z,
+        },
+        10,
+        (indicatorVisibility, isVisible) => {
+          console.log(indicatorVisibility, isVisible);
+        }
+      );
+
+      console.log("created at", head.point.x, head.point.y, head.point.z);
+      if (!(window as any).subs) (window as any).subs = [];
+      (window as any).subs.push(s);
     }
     // calculate objects intersecting the picking ray
   });
+}
+
+function rand255() {
+  return Math.floor(Math.random() * 255);
 }
