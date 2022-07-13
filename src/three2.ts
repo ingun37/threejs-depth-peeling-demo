@@ -12,7 +12,7 @@ import {
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { Observable, Subject } from "rxjs";
 import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry";
-import { Indicators } from "./Indicators";
+import { Indicators, IndicatorSubscription } from "./Indicators";
 
 export async function three2(
   id: string,
@@ -90,6 +90,9 @@ export async function three2(
 
       console.log("created at", head.point.x, head.point.y, head.point.z);
       if (!(window as any).subs) (window as any).subs = [];
+      (window as any).subs = (
+        (window as any).subs as IndicatorSubscription[]
+      ).filter((x) => x.isAlive());
       (window as any).subs.push(s);
     }
     // calculate objects intersecting the picking ray

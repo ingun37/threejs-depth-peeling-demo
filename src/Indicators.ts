@@ -3,7 +3,6 @@ import {
   ColorRepresentation,
   DoubleSide,
   InstancedMesh,
-  IUniform,
   Matrix4,
   MeshBasicMaterial,
   PerspectiveCamera,
@@ -11,13 +10,9 @@ import {
   SphereBufferGeometry,
   Vector2,
   Vector3,
-  Vector4,
   WebGLRenderer,
-  WebGLRenderTarget,
 } from "three";
 import {
-  animationFrameScheduler,
-  auditTime,
   debounceTime,
   distinctUntilChanged,
   filter,
@@ -48,6 +43,7 @@ export class Indicators {
   subscribersEvent = new Subject<SubscriberEvent>();
   pruneRx = new Subject();
   moveRx = new Subject();
+
   constructor(
     private renderer: WebGLRenderer,
     scene: Scene,
@@ -113,6 +109,21 @@ export class Indicators {
     this.instances.instanceMatrix.needsUpdate = true;
     const ctx = this.renderer.getContext();
     const pixelBuffer = new Uint8Array(4);
+
+    const updateTransform = () => {
+      const idx = this.subscriptions.indexOf(subscription);
+      if (idx === -1) throw new Error("Failed to find subscription");
+      const viewP = pV3
+        .set(t.elements[12], t.elements[13], t.elements[14])
+        .applyMatrix4(this.camera.matrixWorldInverse);
+      const fixedSizeScale = (size * -viewP.z) / this.standardZ;
+
+      s.makeScale(fixedSizeScale, fixedSizeScale, fixedSizeScale);
+      transform.identity().multiply(t).multiply(s);
+      this.instances.setMatrixAt(idx, transform);
+      this.instances.instanceMatrix.needsUpdate = true;
+      this.render();
+    };
     const subscription = this.indicatorVisibilityRx
       .pipe(
         distinctUntilChanged()
@@ -153,45 +164,42 @@ export class Indicators {
         callback(indicatorEnabled, isVisible);
       });
     subscription.add(
-      merge(this.cameraMoveRx, this.pruneRx, this.moveRx).subscribe(() => {
-        const idx = this.subscriptions.indexOf(subscription);
-        if (idx === -1) throw new Error("Failed to find subscription");
-        const viewP = pV3
-          .set(t.elements[12], t.elements[13], t.elements[14])
-          .applyMatrix4(this.camera.matrixWorldInverse);
-        const fixedSizeScale = (size * -viewP.z) / this.standardZ;
-
-        s.makeScale(fixedSizeScale, fixedSizeScale, fixedSizeScale);
-        transform.identity().multiply(t).multiply(s);
-        this.instances.setMatrixAt(idx, transform);
-        this.instances.instanceMatrix.needsUpdate = true;
-        this.render();
-      })
+      merge(this.cameraMoveRx, this.pruneRx, this.moveRx).subscribe(
+        updateTransform
+      )
     );
     this.subscriptions.push(subscription);
 
+    updateTransform();
     const isub = new IndicatorSubscription(subscription, t);
     isub.events.subscribe((e) => this.subscribersEvent.next(e));
     return isub;
   }
 }
 
-class IndicatorSubscription {
+export class IndicatorSubscription {
   events = new Subject<SubscriberEvent>();
+
   constructor(
     private subscription: Subscription,
     private translationMatrix: Matrix4
   ) {}
+
   unsubscribe() {
     this.subscription.unsubscribe();
     this.events.next(SubscriberEvent.Unsubscribed);
     this.events.complete();
   }
+
   move(x: number, y: number, z: number) {
     this.translationMatrix.makeTranslation(x, y, z);
     this.events.next(SubscriberEvent.Moved);
   }
+  isAlive(): boolean {
+    return !this.subscription.closed;
+  }
 }
+
 function scale255(f0to1: number) {
   return Math.floor(255 * f0to1);
 }
