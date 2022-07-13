@@ -106,7 +106,7 @@ export class Indicators {
 
             s.makeScale(fixedSizeScale, fixedSizeScale, fixedSizeScale);
             transform.identity().multiply(t).multiply(s);
-            this.instances.setMatrixAt(initialIdx, transform);
+            this.instances.setMatrixAt(idx, transform);
             this.instances.instanceMatrix.needsUpdate = true;
           }
         }),
