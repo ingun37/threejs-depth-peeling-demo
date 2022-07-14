@@ -26,7 +26,7 @@ export async function three2(
   renderer.setSize(width, height);
   renderer.setClearAlpha(0);
 
-  // renderer.setPixelRatio(devicePixelRatio);
+  renderer.setPixelRatio(window.devicePixelRatio);
   document.getElementById(id)!.appendChild(renderer.domElement);
   camera.position.z = 200;
 

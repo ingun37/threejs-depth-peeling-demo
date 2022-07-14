@@ -38,7 +38,6 @@ export class Indicators {
   instances: InstancedMesh;
   subscriptions: Subscription[] = [];
   indicatorVisibilityRx = new Subject<IndicatorEnabled>();
-  standardZ: number;
   uniqueColor: Color;
   subscribersEvent = new Subject<SubscriberEvent>();
   pruneRx = new Subject();
@@ -56,7 +55,6 @@ export class Indicators {
     private render: () => void
   ) {
     this.uniqueColor = new Color(color);
-    this.standardZ = initialScreenHeight / (2 * Math.tan(camera.fov / 2));
     // const g = circleGeometry(circleSegment, radius);
     const g = new SphereBufferGeometry(radius);
     const m2 = new MeshBasicMaterial({
@@ -116,7 +114,9 @@ export class Indicators {
       const viewP = pV3
         .set(t.elements[12], t.elements[13], t.elements[14])
         .applyMatrix4(this.camera.matrixWorldInverse);
-      const fixedSizeScale = (size * -viewP.z) / this.standardZ;
+      this.renderer.getSize(screenSize);
+      const standardZ = screenSize.height / (2 * Math.tan(this.camera.fov / 2));
+      const fixedSizeScale = (size * -viewP.z) / standardZ;
 
       s.makeScale(fixedSizeScale, fixedSizeScale, fixedSizeScale);
       transform.identity().multiply(t).multiply(s);
@@ -133,11 +133,15 @@ export class Indicators {
         const ndc = pV3
           .set(t.elements[12], t.elements[13], t.elements[14])
           .project(this.camera);
+        const pixelRatio = this.renderer.getPixelRatio() ?? 1;
         this.renderer.getSize(screenSize);
-        const dx = Math.floor(((ndc.x + 1) * screenSize.width) / 2);
-        const dy = Math.floor(((ndc.y + 1) * screenSize.height) / 2);
+        const dx = Math.floor(
+          ((ndc.x + 1) * screenSize.width * pixelRatio) / 2
+        );
+        const dy = Math.floor(
+          ((ndc.y + 1) * screenSize.height * pixelRatio) / 2
+        );
         let isVisible = false;
-        const pixelRatio = this.renderer.pixelRatio ?? 1;
         const color = this.uniqueColor;
         if (
           0 <= dx &&
