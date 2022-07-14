@@ -11,7 +11,7 @@ import {
   WebGLRenderer,
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { Observable, Subject } from "rxjs";
+import { animationFrameScheduler, auditTime, Observable, Subject } from "rxjs";
 import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry";
 import { Indicators, IndicatorSubscription } from "./Indicators";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
@@ -55,12 +55,12 @@ export async function three3(
     )
   );
 
-  const animate = () =>
-    requestAnimationFrame(() => {
-      renderer.clear();
-      composer.render();
-      // renderer.render(scene, camera);
-    });
+  const animateRx = new Subject();
+  animateRx.pipe(auditTime(0, animationFrameScheduler)).subscribe(() => {
+    renderer.clear();
+    composer.render();
+  });
+  const animate = () => animateRx.next(0);
 
   const orbit = new OrbitControls(camera, renderer.domElement);
   orbit.update();
@@ -100,8 +100,15 @@ export async function three3(
           z: head.point.z,
         },
         10,
-        (indicatorVisibility, isVisible) => {
-          console.log(indicatorVisibility, isVisible);
+        (param) => {
+          switch (param.indicatorMode) {
+            case "off":
+              console.log("Off", param.lastlyVisible);
+              break;
+            case "on":
+              console.log("On");
+              break;
+          }
         }
       );
 

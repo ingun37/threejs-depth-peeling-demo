@@ -24,9 +24,9 @@ import {
   tap,
 } from "rxjs";
 
-export enum IndicatorEnabled {
-  SHOWN,
-  HIDDEN,
+export enum IndicatorMode {
+  ON,
+  OFF,
 }
 
 export enum SubscriberEvent {
@@ -36,8 +36,8 @@ export enum SubscriberEvent {
 
 export class Indicators {
   instances: InstancedMesh;
-  subscriptions: Subscription[] = [];
-  indicatorVisibilityRx = new Subject<IndicatorEnabled>();
+  subscriptions: IndicatorSubscription[] = [];
+  indicatorStatusRx = new Subject<IndicatorMode>();
   uniqueColor: Color;
   subscribersEvent = new Subject<SubscriberEvent>();
   pruneRx = new Subject();
@@ -66,18 +66,18 @@ export class Indicators {
     this.instances.count = 0;
     scene.add(this.instances);
     merge(
-      cameraMoveRx.pipe(map(() => IndicatorEnabled.SHOWN)),
+      cameraMoveRx.pipe(map(() => IndicatorMode.ON)),
       cameraMoveRx.pipe(
         debounceTime(300),
-        map(() => IndicatorEnabled.HIDDEN)
+        map(() => IndicatorMode.OFF)
       )
-    ).subscribe(this.indicatorVisibilityRx);
+    ).subscribe(this.indicatorStatusRx);
 
     this.subscribersEvent
       .pipe(
         filter((e) => e === SubscriberEvent.Unsubscribed),
         tap(() => {
-          this.subscriptions = this.subscriptions.filter((x) => !x.closed);
+          this.subscriptions = this.subscriptions.filter((x) => x.isAlive());
           this.instances.count = this.subscriptions.length;
           render();
         })
@@ -86,14 +86,30 @@ export class Indicators {
     this.subscribersEvent
       .pipe(filter((e) => e === SubscriberEvent.Moved))
       .subscribe(this.moveRx);
+    this.indicatorStatusRx.pipe(distinctUntilChanged()).subscribe((status) => {
+      if (status === IndicatorMode.ON) {
+        this.instances.visible = true;
+      } else if (status === IndicatorMode.OFF) {
+        requestAnimationFrame(() => {
+          this.instances.visible = false;
+          this.render();
+        });
+      }
+    });
   }
 
   subscribe(
     pos: { x: number; y: number; z: number },
     size: number,
     callback: (
-      indicatorVisibility: IndicatorEnabled,
-      isVisible: boolean
+      param:
+        | {
+            indicatorMode: "off";
+            lastlyVisible: boolean;
+          }
+        | {
+            indicatorMode: "on";
+          }
     ) => void
   ) {
     const screenSize = new Vector2();
@@ -108,8 +124,60 @@ export class Indicators {
     const ctx = this.renderer.getContext();
     const pixelBuffer = new Uint8Array(4);
 
+    const subscription = this.indicatorStatusRx
+      .pipe(
+        distinctUntilChanged()
+        // auditTime(0, animationFrameScheduler)
+      )
+      .subscribe((indicatorEnabled) => {
+        switch (indicatorEnabled) {
+          case IndicatorMode.ON:
+            callback({ indicatorMode: "on" });
+            break;
+          case IndicatorMode.OFF:
+            const ndc = pV3
+              .set(t.elements[12], t.elements[13], t.elements[14])
+              .project(this.camera);
+            const pixelRatio = this.renderer.getPixelRatio() ?? 1;
+            this.renderer.getSize(screenSize);
+            const dx = Math.floor(
+              ((ndc.x + 1) * screenSize.width * pixelRatio) / 2
+            );
+            const dy = Math.floor(
+              ((ndc.y + 1) * screenSize.height * pixelRatio) / 2
+            );
+            let isVisible = false;
+            const color = this.uniqueColor;
+            if (
+              0 <= dx &&
+              0 <= dy &&
+              dx < screenSize.width * pixelRatio &&
+              dy < screenSize.height * pixelRatio
+            ) {
+              ctx.readPixels(
+                dx,
+                dy,
+                1,
+                1,
+                ctx.RGBA,
+                ctx.UNSIGNED_BYTE,
+                pixelBuffer
+              );
+
+              isVisible =
+                pixelBuffer[0] === scale255(color.r) &&
+                pixelBuffer[1] === scale255(color.g) &&
+                pixelBuffer[2] === scale255(color.b);
+            }
+
+            callback({ indicatorMode: "off", lastlyVisible: isVisible });
+            break;
+        }
+      });
+    const isub = new IndicatorSubscription(subscription, t);
+
     const updateTransform = () => {
-      const idx = this.subscriptions.indexOf(subscription);
+      const idx = this.subscriptions.indexOf(isub);
       if (idx === -1) throw new Error("Failed to find subscription");
       const viewP = pV3
         .set(t.elements[12], t.elements[13], t.elements[14])
@@ -124,58 +192,20 @@ export class Indicators {
       this.instances.instanceMatrix.needsUpdate = true;
       this.render();
     };
-    const subscription = this.indicatorVisibilityRx
-      .pipe(
-        distinctUntilChanged()
-        // auditTime(0, animationFrameScheduler)
-      )
-      .subscribe((indicatorEnabled) => {
-        const ndc = pV3
-          .set(t.elements[12], t.elements[13], t.elements[14])
-          .project(this.camera);
-        const pixelRatio = this.renderer.getPixelRatio() ?? 1;
-        this.renderer.getSize(screenSize);
-        const dx = Math.floor(
-          ((ndc.x + 1) * screenSize.width * pixelRatio) / 2
-        );
-        const dy = Math.floor(
-          ((ndc.y + 1) * screenSize.height * pixelRatio) / 2
-        );
-        let isVisible = false;
-        const color = this.uniqueColor;
-        if (
-          0 <= dx &&
-          0 <= dy &&
-          dx < screenSize.width * pixelRatio &&
-          dy < screenSize.height * pixelRatio
-        ) {
-          ctx.readPixels(
-            dx,
-            dy,
-            1,
-            1,
-            ctx.RGBA,
-            ctx.UNSIGNED_BYTE,
-            pixelBuffer
-          );
 
-          isVisible =
-            pixelBuffer[0] === scale255(color.r) &&
-            pixelBuffer[1] === scale255(color.g) &&
-            pixelBuffer[2] === scale255(color.b);
-        }
-
-        callback(indicatorEnabled, isVisible);
-      });
     subscription.add(
       merge(this.cameraMoveRx, this.pruneRx, this.moveRx).subscribe(
         updateTransform
       )
     );
-    this.subscriptions.push(subscription);
+    this.subscriptions.push(isub);
 
     updateTransform();
-    const isub = new IndicatorSubscription(subscription, t);
+
+    // Not doing
+    // events.subscribe(this.subscribersEvent)
+    // Because we don't want subscriber to complete along with observable
+    // Ingun, July 14 2022.
     isub.events.subscribe((e) => this.subscribersEvent.next(e));
     return isub;
   }
