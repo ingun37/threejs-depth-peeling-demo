@@ -14,6 +14,7 @@ import {
 import { range } from "fp-ts/NonEmptyArray";
 import { BehaviorSubject, Subject } from "rxjs";
 import { three2 } from "../three2";
+import { three3 } from "../three3";
 const id = "everything";
 const defaultWidth = 1024;
 const defaultHeight = 1024;
@@ -25,7 +26,8 @@ const mouseRx = new Subject<[number, number]>();
 export default function Everything() {
   useEffect(() => {
     // three(id, defaultWidth, defaultHeight, depthRx, screenSizeRx, enableRx);
-    three2(id, defaultWidth, defaultHeight, mouseRx);
+    // three2(id, defaultWidth, defaultHeight, mouseRx);
+    three3(id, defaultWidth, defaultHeight, mouseRx);
   }, []);
   const [width, setWidth] = useState(defaultWidth);
   const [height, setHeight] = useState(defaultHeight);
