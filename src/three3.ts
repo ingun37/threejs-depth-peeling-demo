@@ -118,6 +118,7 @@ export async function three3(
         (window as any).subs as IndicatorSubscription[]
       ).filter((x) => x.isAlive());
       (window as any).subs.push(s);
+      (window as any).disposeIndicator = () => indicators.dispose();
     }
     // calculate objects intersecting the picking ray
   });

@@ -7,6 +7,7 @@ import {
   MeshBasicMaterial,
   PerspectiveCamera,
   Scene,
+  ShaderMaterial,
   SphereBufferGeometry,
   Vector2,
   Vector3,
@@ -43,6 +44,17 @@ export class Indicators {
   pruneRx = new Subject();
   moveRx = new Subject();
 
+  dispose() {
+    this.instances.dispose();
+    (this.instances.material as ShaderMaterial).dispose();
+    while (0 < this.subscriptions.length)
+      this.subscriptions.pop()?.unsubscribe();
+    this.indicatorStatusRx.complete();
+    this.subscribersEvent.complete();
+    this.pruneRx.complete();
+    this.moveRx.complete();
+    this.render();
+  }
   constructor(
     private renderer: WebGLRenderer,
     scene: Scene,
